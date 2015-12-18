@@ -12,6 +12,7 @@ end
 
 local function set_filter_formspec(data, meta)
 	local itemname = data.wise_desc.." Filter-Injector"
+
 	local exmatch_button = ""
 	if data.stackwise then
 		exmatch_button =
@@ -19,7 +20,12 @@ local function set_filter_formspec(data, meta)
 				{"Exact match - off",
 				 "Exact match - on "})
 	end
-	local formspec = "size[8,8.5]"..
+
+	local formspec
+	if data.digiline then
+		formspec = "field[channel;Channel;${channel}]"
+	else
+		formspec = "size[8,8.5]"..
 			"item_image[0,0;1,1;pipeworks:"..data.name.."]"..
 			"label[1,0;"..minetest.formspec_escape(itemname).."]"..
 			"label[0,1;Prefer item types:]"..
@@ -30,6 +36,7 @@ local function set_filter_formspec(data, meta)
 				 "Sequence slots by Rotation"})..
 			exmatch_button..
 			"list[current_player;main;0,4.5;8,4;]"
+	end
 	meta:set_string("formspec", formspec)
 end
 
@@ -115,7 +122,7 @@ local function grabAndFire(data,slotseq_mode,exmatch_mode,filtmeta,frominv,fromi
 	return false
 end
 
-local function punch_filter(data, filtpos, filtnode)
+local function punch_filter(data, filtpos, filtnode, msg)
 	local filtmeta = minetest.get_meta(filtpos)
 	local filtinv = filtmeta:get_inventory()
 	local owner = filtmeta:get_string("owner")
@@ -132,10 +139,42 @@ local function punch_filter(data, filtpos, filtnode)
 	local fromtube = fromdef.tube
 	if not (fromtube and fromtube.input_inventory) then return end
 	local filters = {}
-	for _, filterstack in ipairs(filtinv:get_list("main")) do
-		local filtername = filterstack:get_name()
-		local filtercount = filterstack:get_count()
-		if filtername ~= "" then table.insert(filters, {name = filtername, count = filtercount}) end
+	if data.digiline then
+		-- could be implemented as recursive local function
+		local t_msg = type(msg)
+		if t_msg == "table" then
+			if msg.slotseq_mode then
+				filtmeta:set_int("slotseq_mode", msg.slotseq_mode)
+			end
+			if type(msg.name) == "string" then
+				table.insert(filters, {name = tostring(msg.name), count = tonumber(msg.count) or 1})
+			else
+				for _, filter in ipairs(msg) do
+					local t_filter = type(filter)
+					if t_filter == "table" then
+						if type(filter.name) == "string" then
+							table.insert(filters, {name = tostring(filter.name), count = tonumber(filter.count) or 1})
+						end
+					elseif t_filter == "string" then
+						local filterstack = ItemStack(filter)
+						filtername = filterstack:get_name()
+						filtercount = filterstack:get_count()
+						if filtername ~= "" then table.insert(filters, {name = filtername, count = filtercount}) end
+					end
+				end
+			end
+		elseif t_msg == "string" then
+			local filterstack = ItemStack(msg)
+			filtername = filterstack:get_name()
+			filtercount = filterstack:get_count()
+			if filtername ~= "" then table.insert(filters, {name = filtername, count = filtercount}) end
+		end
+	else
+		for _, filterstack in ipairs(filtinv:get_list("main")) do
+			local filtername = filterstack:get_name()
+			local filtercount = filterstack:get_count()
+			if filtername ~= "" then table.insert(filters, {name = filtername, count = filtercount}) end
+		end
 	end
 	if #filters == 0 then table.insert(filters, "") end
 	local slotseq_mode = filtmeta:get_int("slotseq_mode")
@@ -167,8 +206,14 @@ for _, data in ipairs({
 		wise_desc = "Stackwise",
 		stackwise = true,
 	},
+	{ -- register even if no digilines
+		name = "digiline_filter",
+		wise_desc = "Digiline",
+		stackwise = true,
+		digiline = true,
+	},
 }) do
-	minetest.register_node("pipeworks:"..data.name, {
+	local node = {
 		description = data.wise_desc.." Filter-Injector",
 		tiles = {
 			"pipeworks_"..data.name.."_top.png",
@@ -194,14 +239,6 @@ for _, data in ipairs({
 			pipeworks.after_place(pos)
 		end,
 		after_dig_node = pipeworks.after_dig,
-		on_receive_fields = function(pos, formname, fields, sender)
-			if not pipeworks.may_configure(pos, sender) then return end
-			fs_helpers.on_receive_fields(pos, fields)
-			local meta = minetest.get_meta(pos)
-			meta:set_int("slotseq_index", 1)
-			set_filter_formspec(data, meta)
-			set_filter_infotext(data, meta)
-		end,
 		allow_metadata_inventory_put = function(pos, listname, index, stack, player)
 			if not pipeworks.may_configure(pos, player) then return 0 end
 			return stack:get_count()
@@ -219,18 +256,50 @@ for _, data in ipairs({
 			local inv = meta:get_inventory()
 			return inv:is_empty("main")
 		end,
-		mesecons = {
+		tube = {connect_sides = {right = 1}},
+	}
+
+	if data.digiline then
+		node.on_receive_fields = function(pos, formname, fields, sender)
+			if fields.channel then
+				minetest.get_meta(pos):set_string("channel", fields.channel)
+			end
+		end
+		node.digiline = {
+			effector = {
+				action = function(pos, node, channel, msg)
+					local meta = minetest.get_meta(pos)
+					local setchan = meta:get_string("channel")
+					if setchan ~= channel then return end
+
+					punch_filter(data, pos, node, msg)
+				end,
+			},
+		}
+	else
+		node.on_receive_fields = function(pos, formname, fields, sender)
+			if not pipeworks.may_configure(pos, sender) then return end
+			fs_helpers.on_receive_fields(pos, fields)
+			local meta = minetest.get_meta(pos)
+			meta:set_int("slotseq_index", 1)
+			set_filter_formspec(data, meta)
+			set_filter_infotext(data, meta)
+		end
+		node.mesecons = {
 			effector = {
 				action_on = function(pos, node)
 					punch_filter(data, pos, node)
 				end,
 			},
-		},
-		tube = {connect_sides = {right = 1}},
-		on_punch = function (pos, node, puncher)
+		}
+		node.on_punch = function (pos, node, puncher)
 			punch_filter(data, pos, node)
-		end,
-	})
+		end
+	end
+
+
+
+	minetest.register_node("pipeworks:"..data.name, node)
 end
 
 minetest.register_craft( {
@@ -250,3 +319,14 @@ minetest.register_craft( {
 	        { "default:steel_ingot", "default:steel_ingot", "homedecor:plastic_sheeting" }
 	},
 })
+
+if minetest.get_modpath("digilines") then
+	minetest.register_craft( {
+		output = "pipeworks:digiline_filter 2",
+		recipe = {
+			{ "default:steel_ingot", "default:steel_ingot", "homedecor:plastic_sheeting" },
+			{ "group:stick", "digilines:wire_std_00000000", "homedecor:plastic_sheeting" },
+			{ "default:steel_ingot", "default:steel_ingot", "homedecor:plastic_sheeting" }
+		},
+	})
+end
