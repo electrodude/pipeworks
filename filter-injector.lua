@@ -146,6 +146,9 @@ local function punch_filter(data, filtpos, filtnode, msg)
 			if msg.slotseq_mode then
 				filtmeta:set_int("slotseq_mode", msg.slotseq_mode)
 			end
+			if msg.exmatch_mode then
+				filtmeta:set_int("exmatch_mode", msg.exmatch_mode)
+			end
 			if type(msg.name) == "string" then
 				table.insert(filters, {name = tostring(msg.name), count = tonumber(msg.count) or 1})
 			else
