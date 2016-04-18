@@ -138,17 +138,38 @@ local function punch_filter(data, filtpos, filtnode, msg)
 	if not fromdef then return end
 	local fromtube = fromdef.tube
 	if not (fromtube and fromtube.input_inventory) then return end
+
+	local slotseq_mode = filtmeta:get_int("slotseq_mode")
+	local exact_match = filtmeta:get_int("exmatch_mode")
+
 	local filters = {}
 	if data.digiline then
 		-- could be implemented as recursive local function
 		local t_msg = type(msg)
 		if t_msg == "table" then
-			if msg.slotseq_mode then
-				filtmeta:set_int("slotseq_mode", msg.slotseq_mode)
+			local slotseq = msg.slotseq
+			local t_slotseq = type(slotseq)
+			if t_slotseq == "number" and slotseq >= 0 and slotseq <= 2 then
+				slotseq_mode = slotseq
+			elseif t_slotseq == "string" then
+				slotseq = string.lower(slotseq)
+				if slotseq == "priority" then
+					slotseq_mode = 0
+				elseif slotseq == "random" then
+					slotseq_mode = 1
+				elseif slotseq == "rotation" then
+					slotseq_mode = 2
+				end
 			end
-			if msg.exmatch_mode then
-				filtmeta:set_int("exmatch_mode", msg.exmatch_mode)
+
+			local exmatch = msg.exmatch
+			local t_exmatch = type(exmatch)
+			if t_exmatch == "number" and exmatch >= 0 and exmatch <= 1 then
+				exact_match = exmatch
+			elseif t_exmatch == "boolean" then
+				exact_match = exmatch and 1 or 0
 			end
+
 			if type(msg.name) == "string" then
 				table.insert(filters, {name = tostring(msg.name), count = tonumber(msg.count) or 1})
 			else
@@ -180,8 +201,7 @@ local function punch_filter(data, filtpos, filtnode, msg)
 		end
 	end
 	if #filters == 0 then table.insert(filters, "") end
-	local slotseq_mode = filtmeta:get_int("slotseq_mode")
-	local exact_match = filtmeta:get_int("exmatch_mode")
+
 	local frommeta = minetest.get_meta(frompos)
 	local frominv = frommeta:get_inventory()
 	if fromtube.before_filter then fromtube.before_filter(frompos) end
