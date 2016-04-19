@@ -170,6 +170,16 @@ local function punch_filter(data, filtpos, filtnode, msg)
 				exact_match = exmatch and 1 or 0
 			end
 
+			local slotseq_index = msg.slotseq_index
+			if type(slotseq_index) == "number" then
+				-- This should allow any valid index, but I'm not completely sure what
+				-- constitutes a valid index, so I'm only allowing resetting it to 1.
+				if slotseq_index == 1 then
+					filtmeta:set_int("slotseq_index", slotseq_index)
+					set_filter_infotext(data, filtmeta)
+				end
+			end
+
 			if type(msg.name) == "string" then
 				table.insert(filters, {name = tostring(msg.name), count = tonumber(msg.count) or 1})
 			else
