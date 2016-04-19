@@ -139,8 +139,8 @@ local function punch_filter(data, filtpos, filtnode, msg)
 	local fromtube = fromdef.tube
 	if not (fromtube and fromtube.input_inventory) then return end
 
-	local slotseq_mode = filtmeta:get_int("slotseq_mode")
-	local exact_match = filtmeta:get_int("exmatch_mode")
+	local slotseq_mode
+	local exact_match
 
 	local filters = {}
 	if data.digiline then
@@ -187,6 +187,14 @@ local function punch_filter(data, filtpos, filtnode, msg)
 					end
 				end
 			end
+
+			if slotseq_mode ~= nil then
+				filtmeta:set_int("slotseq_mode", slotseq_mode)
+			end
+
+			if exact_match ~= nil then
+				filtmeta:set_int("exmatch_mode", exact_match)
+			end
 		elseif t_msg == "string" then
 			local filterstack = ItemStack(msg)
 			filtername = filterstack:get_name()
@@ -201,6 +209,14 @@ local function punch_filter(data, filtpos, filtnode, msg)
 		end
 	end
 	if #filters == 0 then table.insert(filters, "") end
+
+	if slotseq_mode == nil then
+		slotseq_mode = filtmeta:get_int("slotseq_mode")
+	end
+
+	if exact_match == nil then
+		exact_match = filtmeta:get_int("exmatch_mode")
+	end
 
 	local frommeta = minetest.get_meta(frompos)
 	local frominv = frommeta:get_inventory()
@@ -284,9 +300,17 @@ for _, data in ipairs({
 
 	if data.digiline then
 		node.on_receive_fields = function(pos, formname, fields, sender)
+			if not pipeworks.may_configure(pos, sender) then return end
+			fs_helpers.on_receive_fields(pos, fields)
+
 			if fields.channel then
 				minetest.get_meta(pos):set_string("channel", fields.channel)
 			end
+
+			local meta = minetest.get_meta(pos)
+			--meta:set_int("slotseq_index", 1)
+			set_filter_formspec(data, meta)
+			set_filter_infotext(data, meta)
 		end
 		node.digiline = {
 			effector = {
