@@ -180,24 +180,6 @@ local function punch_filter(data, filtpos, filtnode, msg)
 				end
 			end
 
-			if type(msg.name) == "string" then
-				table.insert(filters, {name = tostring(msg.name), count = tonumber(msg.count) or 1})
-			else
-				for _, filter in ipairs(msg) do
-					local t_filter = type(filter)
-					if t_filter == "table" then
-						if type(filter.name) == "string" then
-							table.insert(filters, {name = tostring(filter.name), count = tonumber(filter.count) or 1})
-						end
-					elseif t_filter == "string" then
-						local filterstack = ItemStack(filter)
-						filtername = filterstack:get_name()
-						filtercount = filterstack:get_count()
-						if filtername ~= "" then table.insert(filters, {name = filtername, count = filtercount}) end
-					end
-				end
-			end
-
 			if slotseq_mode ~= nil then
 				filtmeta:set_int("slotseq_mode", slotseq_mode)
 			end
@@ -205,10 +187,32 @@ local function punch_filter(data, filtpos, filtnode, msg)
 			if exact_match ~= nil then
 				filtmeta:set_int("exmatch_mode", exact_match)
 			end
+
+			if msg.nofire then
+				return
+			end
+
+			if type(msg.name) == "string" then
+				table.insert(filters, {name = msg.name, count = tonumber(msg.count) or 1})
+			else
+				for _, filter in ipairs(msg) do
+					local t_filter = type(filter)
+					if t_filter == "table" then
+						if type(filter.name) == "string" then
+							table.insert(filters, {name = filter.name, count = tonumber(filter.count) or 1})
+						end
+					elseif t_filter == "string" then
+						local filterstack = ItemStack(filter)
+						local filtername = filterstack:get_name()
+						local filtercount = filterstack:get_count()
+						if filtername ~= "" then table.insert(filters, {name = filtername, count = filtercount}) end
+					end
+				end
+			end
 		elseif t_msg == "string" then
 			local filterstack = ItemStack(msg)
-			filtername = filterstack:get_name()
-			filtercount = filterstack:get_count()
+			local filtername = filterstack:get_name()
+			local filtercount = filterstack:get_count()
 			if filtername ~= "" then table.insert(filters, {name = filtername, count = filtercount}) end
 		end
 	else
