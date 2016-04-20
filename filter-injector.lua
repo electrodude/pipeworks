@@ -327,6 +327,11 @@ for _, data in ipairs({
 	}
 
 	if data.digiline then
+		node.groups.mesecon = nil
+		if not minetest.get_modpath("digilines") then
+			node.groups.not_in_creative_inventory = 1
+		end
+
 		node.on_receive_fields = function(pos, formname, fields, sender)
 			if not pipeworks.may_configure(pos, sender) then return end
 			fs_helpers.on_receive_fields(pos, fields)
