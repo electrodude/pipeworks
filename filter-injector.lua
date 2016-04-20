@@ -13,18 +13,28 @@ end
 local function set_filter_formspec(data, meta)
 	local itemname = data.wise_desc.." Filter-Injector"
 
-	local exmatch_button = ""
-	if data.stackwise then
-		exmatch_button =
-			fs_helpers.cycling_button(meta, "button[4,3.5;4,1", "exmatch_mode",
-				{"Exact match - off",
-				 "Exact match - on "})
-	end
-
 	local formspec
 	if data.digiline then
-		formspec = "field[channel;Channel;${channel}]"
+		formspec = "size[8,2.7]"..
+			"item_image[0,0;1,1;pipeworks:"..data.name.."]"..
+			"label[1,0;"..minetest.formspec_escape(itemname).."]"..
+			"field[0.3,1.5;8.0,1;channel;Channel;${channel}]"..
+			fs_helpers.cycling_button(meta, "button[0,2;4,1", "slotseq_mode",
+				{"Sequence slots by Priority",
+				 "Sequence slots Randomly",
+				 "Sequence slots by Rotation"})..
+			fs_helpers.cycling_button(meta, "button[4,2;4,1", "exmatch_mode",
+				{"Exact match - off",
+				 "Exact match - on "})
 	else
+		local exmatch_button = ""
+		if data.stackwise then
+			exmatch_button =
+				fs_helpers.cycling_button(meta, "button[4,3.5;4,1", "exmatch_mode",
+					{"Exact match - off",
+					 "Exact match - on "})
+		end
+
 		formspec = "size[8,8.5]"..
 			"item_image[0,0;1,1;pipeworks:"..data.name.."]"..
 			"label[1,0;"..minetest.formspec_escape(itemname).."]"..
@@ -186,6 +196,10 @@ local function punch_filter(data, filtpos, filtnode, msg)
 
 			if exact_match ~= nil then
 				filtmeta:set_int("exmatch_mode", exact_match)
+			end
+
+			if slotseq_mode ~= nil or exact_match ~= nil then
+				set_filter_formspec(data, filtmeta)
 			end
 
 			if msg.nofire then
