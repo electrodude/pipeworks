@@ -154,7 +154,6 @@ local function punch_filter(data, filtpos, filtnode, msg)
 
 	local filters = {}
 	if data.digiline then
-		-- could be implemented as recursive local function
 		local t_msg = type(msg)
 		if t_msg == "table" then
 			local slotseq = msg.slotseq
