@@ -84,12 +84,12 @@ if minetest.get_modpath("digilines") and pipeworks.enable_digiline_detector_tube
 					end},
 				on_construct = function(pos)
 					local meta = minetest.get_meta(pos)
-					local formspec =
+					meta:set_string("formspec",
 						"size[8.6,2.2]"..
 						"field[0.6,0.6;8,1;channel;Channel:;${channel}]"..
 						"image[0.3,1.3;1,1;pipeworks_digiline_detector_tube_inv.png]"..
 						"label[1.6,1.2;Digiline Detecting Tube]"
-					meta:set_string("formspec", formspec)
+					)
 				end,
 				on_receive_fields = function(pos, formname, fields, sender)
 					if fields.channel then
