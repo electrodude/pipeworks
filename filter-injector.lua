@@ -64,6 +64,7 @@ local function grabAndFire(data,slotseq_mode,exmatch_mode,filtmeta,frominv,fromi
 		else
 			local fname = filterfor.name
 			local fgroup = filterfor.group
+			local fcount = filterfor.count
 			local fwear = filterfor.wear
 			local fmetadata = filterfor.metadata
 			matches = (not fname                                             -- If there's a name filter,
@@ -73,6 +74,9 @@ local function grabAndFire(data,slotseq_mode,exmatch_mode,filtmeta,frominv,fromi
 			               or (type(fgroup) == "string"                      --  it must be a string
 			                   and minetest.get_item_group(                  --  and it must match.
 			                                stack:get_name(), fgroup) ~= 0))
+
+			          and (not fcount                                        -- If there's a count,
+			               or type(fcount) == "number")                      --  it must be a number.
 
 			          and (not fwear                                         -- If there's a wear filter:
 			               or (type(fwear) == "number"                       --  If it's a number,
@@ -85,7 +89,7 @@ local function grabAndFire(data,slotseq_mode,exmatch_mode,filtmeta,frominv,fromi
 			                        or (type(fwear[2]) == "number"           --    it must be a number
 			                            and stack:get_wear() < fwear[2]))))  --    and it must be > the actual wear.
 			                                                                 --  If the wear filter is of any other type, fail.
-			                                                                 --
+
 			          and (not fmetadata                                     -- If there's a matadata filter,
 			               or (type(fmetadata) == "string"                   --  it must be a string
 			                   and stack:get_metadata() == fmetadata))       --  and it must match.
